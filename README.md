@@ -70,9 +70,10 @@ The bot tracks blessers by Telegram handle because `/bless` is based on `@handle
 4. Set these environment variables in Render:
    - `BOT_TOKEN`
    - `MONGODB_URI`
-   - `WEBHOOK_BASE_URL`
 5. Keep `BOT_MODE=webhook`.
 6. Deploy.
+
+On Render, the bot can use Render's own `RENDER_EXTERNAL_URL` automatically, so you usually do not need to set `WEBHOOK_BASE_URL` manually unless you want to use a custom domain.
 
 The bot exposes:
 

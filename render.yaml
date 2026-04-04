@@ -15,8 +15,6 @@ services:
         value: blessyou_bot
       - key: BOT_MODE
         value: webhook
-      - key: WEBHOOK_BASE_URL
-        sync: false
       - key: WEBHOOK_PATH
         value: /telegram/webhook
       - key: DEFAULT_UNBLESS_PENALTY

@@ -47,7 +47,11 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         bot_mode = os.getenv("BOT_MODE", "polling").strip().lower() or "polling"
-        webhook_base_url = os.getenv("WEBHOOK_BASE_URL", "").strip() or None
+        webhook_base_url = (
+            os.getenv("WEBHOOK_BASE_URL", "").strip()
+            or os.getenv("RENDER_EXTERNAL_URL", "").strip()
+            or None
+        )
         webhook_secret = os.getenv("WEBHOOK_SECRET", "").strip() or None
         webhook_path = os.getenv("WEBHOOK_PATH", "/telegram/webhook").strip() or "/telegram/webhook"
 
