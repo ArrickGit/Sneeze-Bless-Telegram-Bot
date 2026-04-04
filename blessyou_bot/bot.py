@@ -416,7 +416,7 @@ def create_web_app() -> FastAPI:
         try:
             yield
         finally:
-            await application.bot.delete_webhook(drop_pending_updates=False)
+            LOGGER.info("Shutting down webhook worker without deleting Telegram webhook")
             await dispatcher.shutdown()
             await application.stop()
             await application.shutdown()
