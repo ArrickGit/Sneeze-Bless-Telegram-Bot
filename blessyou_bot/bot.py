@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from telegram import BotCommand, ForceReply, Update
 from telegram.constants import ChatMemberStatus
 from telegram.ext import (
+    AIORateLimiter,
     Application,
     CallbackContext,
     CommandHandler,
@@ -32,7 +33,12 @@ UNBLESS_INPUT = 2
 
 
 def create_application(settings: Settings, storage: MongoStorage) -> Application:
-    application = Application.builder().token(settings.bot_token).build()
+    application = (
+        Application.builder()
+        .token(settings.bot_token)
+        .rate_limiter(AIORateLimiter(max_retries=3))
+        .build()
+    )
     application.bot_data["settings"] = settings
     application.bot_data["storage"] = storage
 
@@ -389,7 +395,7 @@ def create_web_app() -> FastAPI:
 
         payload = await request.json()
         update = Update.de_json(payload, application.bot)
-        await application.process_update(update)
+        application.create_task(application.process_update(update), update=update)
         return {"ok": True}
 
     return web_app
