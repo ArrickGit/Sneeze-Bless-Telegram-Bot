@@ -32,6 +32,42 @@ BLESS_INPUT = 1
 UNBLESS_INPUT = 2
 
 
+class UpdateDispatcher:
+    def __init__(self, application: Application) -> None:
+        self._application = application
+        self._queue: asyncio.Queue[Update] = asyncio.Queue()
+        self._worker: asyncio.Task[None] | None = None
+        self._closed = False
+
+    async def enqueue(self, update: Update) -> None:
+        if self._closed:
+            raise RuntimeError("Update dispatcher is shut down")
+
+        if self._worker is None or self._worker.done():
+            self._worker = asyncio.create_task(self._run())
+
+        self._queue.put_nowait(update)
+
+    async def shutdown(self) -> None:
+        self._closed = True
+        await self._queue.join()
+
+        if self._worker is not None:
+            self._worker.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._worker
+
+    async def _run(self) -> None:
+        while True:
+            update = await self._queue.get()
+            try:
+                await self._application.process_update(update)
+            except Exception:
+                LOGGER.exception("Failed to process queued update")
+            finally:
+                self._queue.task_done()
+
+
 def create_application(settings: Settings, storage: MongoStorage) -> Application:
     application = (
         Application.builder()
@@ -360,6 +396,7 @@ def create_web_app() -> FastAPI:
     configure_logging(settings.log_level)
     storage = MongoStorage(settings.mongodb_uri, settings.database_name)
     application = create_application(settings, storage)
+    dispatcher = UpdateDispatcher(application)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -380,6 +417,7 @@ def create_web_app() -> FastAPI:
             yield
         finally:
             await application.bot.delete_webhook(drop_pending_updates=False)
+            await dispatcher.shutdown()
             await application.stop()
             await application.shutdown()
             await storage.close()
@@ -399,7 +437,7 @@ def create_web_app() -> FastAPI:
 
         payload = await request.json()
         update = Update.de_json(payload, application.bot)
-        application.create_task(application.process_update(update), update=update)
+        await dispatcher.enqueue(update)
         return {"ok": True}
 
     return web_app
