@@ -327,13 +327,16 @@ async def run_polling(settings: Settings) -> None:
     LOGGER.info("Connected to MongoDB and ensured indexes")
     await application.initialize()
     await configure_application(application, settings)
-    await application.bot.delete_webhook(drop_pending_updates=False)
+    await application.bot.delete_webhook(drop_pending_updates=settings.drop_pending_updates)
     await application.start()
 
     if application.updater is None:
         raise RuntimeError("Polling requires an updater")
 
-    await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+    await application.updater.start_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=settings.drop_pending_updates,
+    )
     LOGGER.info("Bless You Sneeze Bot is running in polling mode")
 
     stop_event = asyncio.Event()
@@ -370,6 +373,7 @@ def create_web_app() -> FastAPI:
             url=settings.webhook_url,
             secret_token=settings.webhook_secret,
             allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=settings.drop_pending_updates,
         )
         LOGGER.info("Webhook configured at %s", settings.webhook_url)
         try:

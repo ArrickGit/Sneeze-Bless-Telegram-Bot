@@ -25,6 +25,17 @@ def _int_env(name: str, default: int) -> int:
         raise RuntimeError(f"Environment variable {name} must be an integer") from exc
 
 
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    if not value:
+        return default
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(f"Environment variable {name} must be a boolean")
+
+
 @dataclass(frozen=True)
 class Settings:
     bot_token: str
@@ -36,6 +47,7 @@ class Settings:
     webhook_secret: str | None
     default_unbless_penalty: int
     scoreboard_limit: int
+    drop_pending_updates: bool
     log_level: str
 
     @property
@@ -68,6 +80,7 @@ class Settings:
             webhook_secret=webhook_secret,
             default_unbless_penalty=_int_env("DEFAULT_UNBLESS_PENALTY", 1),
             scoreboard_limit=_int_env("SCOREBOARD_LIMIT", 10),
+            drop_pending_updates=_bool_env("DROP_PENDING_UPDATES", True),
             log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
         )
 

@@ -44,6 +44,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+By default, the bot drops old queued Telegram updates on startup so it does not replay stale `/bless` spam after downtime. If you want Telegram to deliver old queued updates instead, set `DROP_PENDING_UPDATES=false`.
+
 ## Commands
 
 - `/help` shows usage.
