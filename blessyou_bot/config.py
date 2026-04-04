@@ -47,7 +47,8 @@ class Settings:
     webhook_secret: str | None
     default_unbless_penalty: int
     scoreboard_limit: int
-    drop_pending_updates: bool
+    drop_pending_updates_on_polling: bool
+    drop_pending_updates_on_webhook_start: bool
     log_level: str
 
     @property
@@ -80,7 +81,8 @@ class Settings:
             webhook_secret=webhook_secret,
             default_unbless_penalty=_int_env("DEFAULT_UNBLESS_PENALTY", 1),
             scoreboard_limit=_int_env("SCOREBOARD_LIMIT", 10),
-            drop_pending_updates=_bool_env("DROP_PENDING_UPDATES", True),
+            drop_pending_updates_on_polling=_bool_env("DROP_PENDING_UPDATES_ON_POLLING", True),
+            drop_pending_updates_on_webhook_start=_bool_env("DROP_PENDING_UPDATES_ON_WEBHOOK_START", False),
             log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper() or "INFO",
         )
 

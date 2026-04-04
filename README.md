@@ -44,7 +44,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-By default, the bot drops old queued Telegram updates on startup so it does not replay stale `/bless` spam after downtime. If you want Telegram to deliver old queued updates instead, set `DROP_PENDING_UPDATES=false`.
+By default, polling mode drops old queued updates on startup so a local debug session does not replay stale `/bless` spam. Webhook mode keeps pending updates so a sleeping host like Render can still receive commands that arrived while it was waking up.
 
 ## Commands
 

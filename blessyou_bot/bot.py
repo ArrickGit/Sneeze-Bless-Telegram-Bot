@@ -363,7 +363,7 @@ async def run_polling(settings: Settings) -> None:
     LOGGER.info("Connected to MongoDB and ensured indexes")
     await application.initialize()
     await configure_application(application, settings)
-    await application.bot.delete_webhook(drop_pending_updates=settings.drop_pending_updates)
+    await application.bot.delete_webhook(drop_pending_updates=settings.drop_pending_updates_on_polling)
     await application.start()
 
     if application.updater is None:
@@ -371,7 +371,7 @@ async def run_polling(settings: Settings) -> None:
 
     await application.updater.start_polling(
         allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=settings.drop_pending_updates,
+        drop_pending_updates=settings.drop_pending_updates_on_polling,
     )
     LOGGER.info("Bless You Sneeze Bot is running in polling mode")
 
@@ -410,7 +410,7 @@ def create_web_app() -> FastAPI:
             url=settings.webhook_url,
             secret_token=settings.webhook_secret,
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=settings.drop_pending_updates,
+            drop_pending_updates=settings.drop_pending_updates_on_webhook_start,
         )
         LOGGER.info("Webhook configured at %s", settings.webhook_url)
         try:
