@@ -124,12 +124,10 @@ class MongoStorage:
         scores_result = await self.scores.delete_many({})
         events_result = await self.events.delete_many({})
         rules_result = await self.rules.delete_many({})
-        known_users_result = await self.known_users.delete_many({})
         return {
             "scores": scores_result.deleted_count,
             "events": events_result.deleted_count,
             "rules": rules_result.deleted_count,
-            "known_users": known_users_result.deleted_count,
         }
 
     async def remember_user(self, user_id: int, username: str | None, full_name: str) -> None:

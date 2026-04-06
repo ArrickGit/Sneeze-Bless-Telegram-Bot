@@ -319,7 +319,8 @@ async def hard_reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.effective_message.reply_text(
         "Hard reset complete.\n"
         f"Deleted {counts['scores']} score rows, {counts['events']} event rows, "
-        f"{counts['rules']} rule documents, and {counts['known_users']} known-user records."
+        f"and {counts['rules']} rule documents.\n"
+        "Known users were kept."
     )
 
 

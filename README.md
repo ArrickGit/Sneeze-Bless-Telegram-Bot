@@ -66,7 +66,7 @@ By default, polling mode drops old queued updates on startup so a local debug se
 There is also a hidden owner-only reset command for emergencies:
 - private chat only
 - requires `OWNER_USER_ID` in `.env`
-- use `/hardreset confirm` to wipe all MongoDB scores, events, and custom rules across every chat
+- use `/hardreset confirm` to wipe all MongoDB scores, events, and custom rules across every chat while keeping known users intact
 
 ## Notes about usernames
 
