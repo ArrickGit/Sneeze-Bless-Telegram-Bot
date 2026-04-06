@@ -41,6 +41,7 @@ class Settings:
     bot_token: str
     mongodb_uri: str
     database_name: str
+    owner_user_id: int | None
     bot_mode: str
     webhook_base_url: str | None
     webhook_path: str
@@ -75,6 +76,7 @@ class Settings:
             bot_token=_require_env("BOT_TOKEN"),
             mongodb_uri=_require_env("MONGODB_URI"),
             database_name=os.getenv("DATABASE_NAME", "blessyou_bot").strip() or "blessyou_bot",
+            owner_user_id=_int_env("OWNER_USER_ID", 0) or None,
             bot_mode=bot_mode,
             webhook_base_url=webhook_base_url,
             webhook_path=webhook_path,

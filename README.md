@@ -29,7 +29,8 @@ Scores are stored in MongoDB so the bot can restart safely without losing data.
 
 1. Create a bot with BotFather and copy the token.
 2. Create a MongoDB Atlas cluster and grab the connection string.
-3. Copy `.env.example` to `.env` and fill in the values.
+3. Find your Telegram numeric user ID if you want to enable the owner-only hard reset command.
+4. Copy `.env.example` to `.env` and fill in the values.
 4. Create a virtual environment and install dependencies:
 
 ```bash
@@ -59,6 +60,11 @@ By default, polling mode drops old queued updates on startup so a local debug se
 - `/addrule Wait for the full sneeze combo before blessing.`
 - `/removerule 3`
 - `/cancel` exits a guided input flow.
+
+There is also a hidden owner-only reset command for emergencies:
+- private chat only
+- requires `OWNER_USER_ID` in `.env`
+- use `/hardreset confirm` to wipe all MongoDB scores, events, and custom rules across every chat
 
 ## Notes about usernames
 

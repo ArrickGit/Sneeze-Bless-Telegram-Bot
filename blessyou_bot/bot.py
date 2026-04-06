@@ -104,6 +104,7 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("hardreset", hard_reset))
     application.add_handler(bless_flow)
     application.add_handler(unbless_flow)
     application.add_handler(CommandHandler("scoreboard", scoreboard))
@@ -293,6 +294,26 @@ async def remove_rule(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.effective_message.reply_text(f"Rule removed. {len(rules_list)} rules remain.")
 
 
+async def hard_reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not await require_owner_private_chat(update, context):
+        return
+
+    if len(context.args) != 1 or context.args[0].strip().lower() != "confirm":
+        await update.effective_message.reply_text(
+            "This will wipe all bless scores, events, and custom rules across every chat.\n\n"
+            "If you really want to do it, send:\n/hardreset confirm"
+        )
+        return
+
+    storage = get_storage(context)
+    counts = await storage.hard_reset()
+    await update.effective_message.reply_text(
+        "Hard reset complete.\n"
+        f"Deleted {counts['scores']} score rows, {counts['events']} event rows, "
+        f"and {counts['rules']} rule documents."
+    )
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.effective_message.reply_text("Canceled.")
     return ConversationHandler.END
@@ -305,6 +326,29 @@ async def require_group_chat(update: Update) -> bool:
 
     await update.effective_message.reply_text("This command is meant for a Telegram group chat.")
     return False
+
+
+async def require_owner_private_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    settings = get_settings(context)
+    chat = update.effective_chat
+    user = update.effective_user
+
+    if chat is None or user is None:
+        return False
+
+    if chat.type != "private":
+        await update.effective_message.reply_text("This command only works in a private chat with the bot.")
+        return False
+
+    if settings.owner_user_id is None:
+        await update.effective_message.reply_text("OWNER_USER_ID is not configured for this bot.")
+        return False
+
+    if user.id != settings.owner_user_id:
+        await update.effective_message.reply_text("You are not allowed to use this command.")
+        return False
+
+    return True
 
 
 async def require_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
