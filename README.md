@@ -4,8 +4,8 @@ A fun Telegram bot for group chats that tracks who said "bless you" first.
 
 ## What it does
 
-- `/bless @first @second` awards 1 point to the first two valid blessers.
-- `/bless` starts a short guided reply flow if you do not want to type both handles in one command.
+- `/bless @first @second [points]` awards points to the first two valid blessers.
+- `/bless` starts a short guided reply flow if you do not want to type the bless entry in one command.
 - `/unbless @user [points] [reason]` removes points for rule breaks.
 - `/scoreboard` shows the current rankings for the chat.
 - `/rules` shows the chat rules.
@@ -52,6 +52,8 @@ By default, polling mode drops old queued updates on startup so a local debug se
 - `/help` shows usage.
 - `/bless @alice @bob`
 - `/bless @alice`
+- `/bless @alice 100000`
+- `/bless @alice @bob 100000`
 - `/bless` and then reply with `@alice @bob` or `@alice`
 - `/unbless @alice`
 - `/unbless @alice 2 early blessing during a sneeze streak`
@@ -69,6 +71,8 @@ There is also a hidden owner-only reset command for emergencies:
 ## Notes about usernames
 
 The bot tracks blessers by Telegram handle because `/bless` is based on `@handles`. If someone changes their Telegram username later, they may look like a new person in the scoreboard. That is a good enough tradeoff for a first version and keeps the bot simple.
+
+The bot now also validates bless and unbless handles against Telegram users it has seen before. If it cannot verify a handle, it will reject the command instead of creating a fake scoreboard entry. In practice, that means someone may need to message the bot once before they can be scored by handle.
 
 ## Render deployment
 

@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from telegram import BotCommand, ForceReply, Update
 from telegram.constants import ChatMemberStatus
+from telegram.error import TelegramError
 from telegram.ext import (
     AIORateLimiter,
     Application,
@@ -77,6 +78,7 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
     )
     application.bot_data["settings"] = settings
     application.bot_data["storage"] = storage
+    application.add_handler(MessageHandler(filters.ALL, remember_seen_users), group=-1)
 
     bless_flow = ConversationHandler(
         entry_points=[CommandHandler("bless", bless_entry)],
@@ -136,7 +138,8 @@ async def bless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
 
     await update.effective_message.reply_text(
-        "Reply with 1 or 2 Telegram handles.\n\nExamples:\n@alice @bob\n@alice",
+        "Reply with 1 or 2 Telegram handles, with an optional amount at the end.\n\n"
+        "Examples:\n@alice @bob\n@alice\n@alice 100000\n@alice @bob 100000",
         reply_markup=ForceReply(selective=True),
     )
     return BLESS_INPUT
@@ -152,17 +155,20 @@ async def process_bless(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_
     chat_id = update.effective_chat.id
 
     try:
-        participants = parse_bless_text(raw_text)
+        parsed = parse_bless_text(raw_text)
     except ParseError as exc:
         await update.effective_message.reply_text(str(exc))
         return False
 
+    if not await validate_group_participants(update, context, parsed.participants):
+        return False
+
     actor = build_actor(update)
-    results = await storage.bless(chat_id, participants, actor)
+    results = await storage.bless(chat_id, parsed.participants, parsed.amount, actor)
 
     lines = ["Bless recorded!"]
     for index, result in enumerate(results, start=1):
-        lines.append(f"{index}. {result['handle']} +1 (now {result['points']})")
+        lines.append(f"{index}. {result['handle']} +{parsed.amount} (now {result['points']})")
     if len(results) == 1:
         lines.append("No second blesser recorded this round.")
 
@@ -202,6 +208,9 @@ async def process_unbless(update: Update, context: ContextTypes.DEFAULT_TYPE, ra
         parsed = parse_unbless_text(raw_text, settings.default_unbless_penalty)
     except ParseError as exc:
         await update.effective_message.reply_text(str(exc))
+        return False
+
+    if not await validate_group_participants(update, context, [parsed.participant]):
         return False
 
     actor = build_actor(update)
@@ -310,7 +319,7 @@ async def hard_reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.effective_message.reply_text(
         "Hard reset complete.\n"
         f"Deleted {counts['scores']} score rows, {counts['events']} event rows, "
-        f"and {counts['rules']} rule documents."
+        f"{counts['rules']} rule documents, and {counts['known_users']} known-user records."
     )
 
 
@@ -326,6 +335,62 @@ async def require_group_chat(update: Update) -> bool:
 
     await update.effective_message.reply_text("This command is meant for a Telegram group chat.")
     return False
+
+
+async def remember_seen_users(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    storage = get_storage(context)
+    users: dict[int, tuple[str | None, str]] = {}
+
+    effective_user = update.effective_user
+    if effective_user is not None:
+        users[effective_user.id] = (effective_user.username, effective_user.full_name)
+
+    message = update.effective_message
+    if message is not None:
+        reply_to_message = message.reply_to_message
+        if reply_to_message and reply_to_message.from_user is not None:
+            reply_user = reply_to_message.from_user
+            users[reply_user.id] = (reply_user.username, reply_user.full_name)
+
+        for member in message.new_chat_members or []:
+            users[member.id] = (member.username, member.full_name)
+
+    for user_id, (username, full_name) in users.items():
+        await storage.remember_user(user_id, username, full_name)
+
+
+async def validate_group_participants(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    participants: list,
+) -> bool:
+    storage = get_storage(context)
+    chat = update.effective_chat
+    message = update.effective_message
+
+    if chat is None or message is None:
+        return False
+
+    for participant in participants:
+        known_user = await storage.find_user_by_username(participant.key)
+        if known_user is None:
+            await message.reply_text(
+                f"I can't verify {participant.handle} yet.\n"
+                "Ask that person to message the bot once, or use a bot command once, so I can confirm them."
+            )
+            return False
+
+        try:
+            member = await context.bot.get_chat_member(chat.id, known_user["user_id"])
+        except TelegramError:
+            await message.reply_text(f"{participant.handle} is not a valid member of this group.")
+            return False
+
+        if member.status in {ChatMemberStatus.LEFT, ChatMemberStatus.BANNED}:
+            await message.reply_text(f"{participant.handle} is not currently in this group.")
+            return False
+
+    return True
 
 
 async def require_owner_private_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:

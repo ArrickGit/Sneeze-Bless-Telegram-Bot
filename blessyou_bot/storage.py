@@ -15,6 +15,7 @@ class MongoStorage:
         self.scores = self._db["scores"]
         self.events = self._db["events"]
         self.rules = self._db["rules"]
+        self.known_users = self._db["known_users"]
 
     async def connect(self) -> None:
         await self._client.admin.command("ping")
@@ -26,6 +27,8 @@ class MongoStorage:
         await self.scores.create_index([("chat_id", ASCENDING), ("points", DESCENDING)])
         await self.scores.create_index([("chat_id", ASCENDING), ("user_key", ASCENDING)], unique=True)
         await self.events.create_index([("chat_id", ASCENDING), ("created_at", DESCENDING)])
+        await self.known_users.create_index([("username", ASCENDING)])
+        await self.known_users.create_index([("updated_at", DESCENDING)])
 
     async def ensure_rules(self, chat_id: int) -> list[str]:
         await self.rules.update_one(
@@ -71,12 +74,13 @@ class MongoStorage:
         self,
         chat_id: int,
         participants: list[Participant],
+        amount: int,
         actor: Actor,
     ) -> list[dict]:
         return await self._apply_score_change(
             chat_id=chat_id,
             participants=participants,
-            delta=1,
+            delta=amount,
             event_type="bless",
             actor=actor,
             reason=None,
@@ -120,11 +124,34 @@ class MongoStorage:
         scores_result = await self.scores.delete_many({})
         events_result = await self.events.delete_many({})
         rules_result = await self.rules.delete_many({})
+        known_users_result = await self.known_users.delete_many({})
         return {
             "scores": scores_result.deleted_count,
             "events": events_result.deleted_count,
             "rules": rules_result.deleted_count,
+            "known_users": known_users_result.deleted_count,
         }
+
+    async def remember_user(self, user_id: int, username: str | None, full_name: str) -> None:
+        await self.known_users.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "username": username.lower() if username else None,
+                    "full_name": full_name,
+                    "updated_at": self._now(),
+                },
+                "$setOnInsert": {"created_at": self._now()},
+            },
+            upsert=True,
+        )
+
+    async def find_user_by_username(self, username: str) -> dict | None:
+        return await self.known_users.find_one(
+            {"username": username.lower()},
+            sort=[("updated_at", DESCENDING)],
+        )
 
     async def _apply_score_change(
         self,
