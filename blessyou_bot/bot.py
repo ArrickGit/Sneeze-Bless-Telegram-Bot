@@ -23,7 +23,7 @@ from telegram.ext import (
 
 from blessyou_bot.config import Settings
 from blessyou_bot.constants import HELP_TEXT
-from blessyou_bot.models import Actor
+from blessyou_bot.models import Actor, Participant
 from blessyou_bot.parsing import ParseError, parse_bless_text, parse_unbless_text
 from blessyou_bot.storage import MongoStorage
 
@@ -107,6 +107,7 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("hardreset", hard_reset))
+    application.add_handler(CommandHandler("blessme", bless_me))
     application.add_handler(bless_flow)
     application.add_handler(unbless_flow)
     application.add_handler(CommandHandler("scoreboard", scoreboard))
@@ -127,6 +128,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(HELP_TEXT)
+
+
+async def bless_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not await require_group_chat(update):
+        return
+
+    if context.args:
+        await update.effective_message.reply_text("Usage: /blessme")
+        return
+
+    user = update.effective_user
+    if user is None or not user.username:
+        await update.effective_message.reply_text(
+            "You need a Telegram username before you can use /blessme."
+        )
+        return
+
+    storage = get_storage(context)
+    actor = build_actor(update)
+    participant = Participant(key=user.username.lower(), handle=f"@{user.username.lower()}")
+    results = await storage.bless(update.effective_chat.id, [participant], 2, actor)
+    result = results[0]
+
+    await update.effective_message.reply_text(
+        f"Self bless recorded: {result['handle']} +2 (now {result['points']})"
+    )
 
 
 async def bless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -454,6 +481,7 @@ async def configure_application(application: Application, settings: Settings) ->
     await application.bot.set_my_commands(
         [
             BotCommand("bless", "Award points to blessers"),
+            BotCommand("blessme", "Bless yourself for +2 points"),
             BotCommand("unbless", "Deduct points for a rule break"),
             BotCommand("scoreboard", "Show the current rankings"),
             BotCommand("rules", "Show the chat rules"),

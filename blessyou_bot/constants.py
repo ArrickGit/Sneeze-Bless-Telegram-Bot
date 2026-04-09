@@ -7,6 +7,7 @@ HELP_TEXT = """Bless You Sneeze Bot commands:
 
 /bless @first @second [points] - Award points to the first two blessers
 /bless @first [points] - Award points to a single blesser
+/blessme - Bless yourself for +2 points
 /bless - Start a guided bless entry
 /unbless @user [points] [reason] - Deduct points for breaking the rules
 /scoreboard - Show the current rankings
@@ -20,5 +21,6 @@ Examples:
 /bless @user1
 /bless @user1 100000
 /bless @user1 @user2 100000
+/blessme
 /unbless @user1 2 early blessing during a sneeze streak
 """
