@@ -5,9 +5,10 @@ import logging
 import signal
 from contextlib import suppress
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from telegram import BotCommand, ForceReply, Update
+from telegram import BotCommand, ForceReply, InputFile, Update
 from telegram.constants import ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import (
@@ -31,6 +32,7 @@ LOGGER = logging.getLogger(__name__)
 
 BLESS_INPUT = 1
 UNBLESS_INPUT = 2
+AUDIO_FILE_PATH = Path(__file__).resolve().parent.parent / "data" / "Faaah.m4a"
 
 
 class UpdateDispatcher:
@@ -108,6 +110,7 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("hardreset", hard_reset))
     application.add_handler(CommandHandler("blessme", bless_me))
+    application.add_handler(CommandHandler("faaaah", faaaah))
     application.add_handler(bless_flow)
     application.add_handler(unbless_flow)
     application.add_handler(CommandHandler("scoreboard", scoreboard))
@@ -128,6 +131,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text(HELP_TEXT)
+
+
+async def faaaah(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not AUDIO_FILE_PATH.exists():
+        LOGGER.error("Faaah audio file is missing at %s", AUDIO_FILE_PATH)
+        await update.effective_message.reply_text("The faaah is temporarily unavailable.")
+        return
+
+    with AUDIO_FILE_PATH.open("rb") as audio_file:
+        await update.effective_message.reply_audio(
+            audio=InputFile(audio_file, filename=AUDIO_FILE_PATH.name),
+            title="Faaah",
+        )
 
 
 async def bless_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -482,6 +498,7 @@ async def configure_application(application: Application, settings: Settings) ->
         [
             BotCommand("bless", "Award points to blessers"),
             BotCommand("blessme", "Bless yourself for +2 points"),
+            BotCommand("faaaah", "Play the faaah audio"),
             BotCommand("unbless", "Deduct points for a rule break"),
             BotCommand("scoreboard", "Show the current rankings"),
             BotCommand("rules", "Show the chat rules"),
