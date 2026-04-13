@@ -24,5 +24,6 @@ Examples:
 /bless @user1 @user2 100000
 /blessme
 /faaaah
+/unbless @user1 -2 early blessing during a sneeze streak
 /unbless @user1 2 early blessing during a sneeze streak
 """

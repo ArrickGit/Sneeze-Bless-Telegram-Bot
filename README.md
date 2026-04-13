@@ -60,6 +60,7 @@ By default, polling mode drops old queued updates on startup so a local debug se
 - `/faaaah`
 - `/bless` and then reply with `@alice @bob` or `@alice`
 - `/unbless @alice`
+- `/unbless @alice -2 early blessing during a sneeze streak`
 - `/unbless @alice 2 early blessing during a sneeze streak`
 - `/scoreboard`
 - `/rules`

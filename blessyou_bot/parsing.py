@@ -76,7 +76,7 @@ def parse_unbless_text(text: str, default_amount: int) -> UnblessInput:
 
     if len(tokens) > 1:
         try:
-            amount = int(tokens[1])
+            amount = abs(int(tokens[1]))
             reason_start = 2
         except ValueError:
             amount = default_amount

@@ -231,6 +231,7 @@ async def unbless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     await update.effective_message.reply_text(
         "Reply with the penalty details.\n\nExamples:\n"
         f"@alice\n@alice {settings.default_unbless_penalty}\n"
+        "@alice -2 early blessing during a sneeze streak\n"
         "@alice 2 early blessing during a sneeze streak",
         reply_markup=ForceReply(selective=True),
     )
