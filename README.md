@@ -6,6 +6,7 @@ A fun Telegram bot for group chats that tracks who said "bless you" first.
 
 - `/bless @first @second [points]` awards points to the first two valid blessers.
 - `/blessme` gives you 2 points for blessing yourself after sneezing.
+- sending the bot's `@handle` by itself in a group gives you 1 point, which is handy because Telegram does not let you tag yourself
 - `/faaaah` sends the bundled `Faaah.m4a` audio clip.
 - `/bless` starts a short guided reply flow if you do not want to type the bless entry in one command.
 - `/unbless @user [points] [reason]` removes points for rule breaks.
@@ -57,6 +58,7 @@ By default, polling mode drops old queued updates on startup so a local debug se
 - `/bless @alice 100000`
 - `/bless @alice @bob 100000`
 - `/blessme`
+- `@your_bot_handle` by itself in a group
 - `/faaaah`
 - `/bless` and then reply with `@alice @bob` or `@alice`
 - `/unbless @alice`

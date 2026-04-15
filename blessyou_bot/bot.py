@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from telegram import BotCommand, ForceReply, InputFile, Update
+from telegram import BotCommand, ForceReply, InputFile, MessageEntity, Update
 from telegram.constants import ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import (
@@ -113,6 +113,12 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
     application.add_handler(CommandHandler("faaaah", faaaah))
     application.add_handler(bless_flow)
     application.add_handler(unbless_flow)
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND & filters.Entity(MessageEntity.MENTION),
+            bless_via_bot_mention,
+        )
+    )
     application.add_handler(CommandHandler("scoreboard", scoreboard))
     application.add_handler(CommandHandler("rules", rules))
     application.add_handler(CommandHandler("addrule", add_rule))
@@ -154,22 +160,17 @@ async def bless_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text("Usage: /blessme")
         return
 
-    user = update.effective_user
-    if user is None or not user.username:
-        await update.effective_message.reply_text(
-            "You need a Telegram username before you can use /blessme."
-        )
+    await record_self_bless(update, context, amount=2, missing_username_hint="/blessme")
+
+
+async def bless_via_bot_mention(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not await require_group_chat(update):
         return
 
-    storage = get_storage(context)
-    actor = build_actor(update)
-    participant = Participant(key=user.username.lower(), handle=f"@{user.username.lower()}")
-    results = await storage.bless(update.effective_chat.id, [participant], 2, actor)
-    result = results[0]
+    if not await is_exact_bot_mention(update.effective_message, context):
+        return
 
-    await update.effective_message.reply_text(
-        f"Self bless recorded: {result['handle']} +2 (now {result['points']})"
-    )
+    await record_self_bless(update, context, amount=1, missing_username_hint="this shortcut")
 
 
 async def bless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -217,6 +218,36 @@ async def process_bless(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_
 
     await update.effective_message.reply_text("\n".join(lines))
     return True
+
+
+async def record_self_bless(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    amount: int,
+    missing_username_hint: str,
+) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    chat = update.effective_chat
+
+    if message is None or chat is None:
+        return
+
+    if user is None or not user.username:
+        await message.reply_text(
+            f"You need a Telegram username before you can use {missing_username_hint}."
+        )
+        return
+
+    storage = get_storage(context)
+    actor = build_actor(update)
+    participant = Participant(key=user.username.lower(), handle=f"@{user.username.lower()}")
+    results = await storage.bless(chat.id, [participant], amount, actor)
+    result = results[0]
+
+    await message.reply_text(
+        f"Self bless recorded: {result['handle']} +{amount} (now {result['points']})"
+    )
 
 
 async def unbless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -402,6 +433,41 @@ async def remember_seen_users(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     for user_id, (username, full_name) in users.items():
         await storage.remember_user(user_id, username, full_name)
+
+
+async def is_exact_bot_mention(message, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    if message is None or not message.text:
+        return False
+
+    bot_mention = await get_bot_mention(context)
+    if bot_mention is None:
+        return False
+
+    if message.text.strip().lower() != bot_mention:
+        return False
+
+    mention_texts = [
+        text.lower() for text in message.parse_entities([MessageEntity.MENTION]).values()
+    ]
+    return len(mention_texts) == 1 and mention_texts[0] == bot_mention
+
+
+async def get_bot_mention(context: CallbackContext) -> str | None:
+    cached = context.application.bot_data.get("bot_mention")
+    if cached is not None:
+        return cached
+
+    username = getattr(context.bot, "username", None)
+    if not username:
+        me = await context.bot.get_me()
+        username = me.username
+
+    if not username:
+        return None
+
+    mention = f"@{username.lower()}"
+    context.application.bot_data["bot_mention"] = mention
+    return mention
 
 
 async def validate_group_participants(
