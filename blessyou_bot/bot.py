@@ -181,8 +181,8 @@ async def bless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
 
     await update.effective_message.reply_text(
-        "Reply with 1 or 2 Telegram handles, with an optional amount at the end.\n\n"
-        "Examples:\n@alice @bob\n@alice\n@alice 100000\n@alice @bob 100000",
+        "Reply with 1 or 2 Telegram handles, or use self for yourself, with an optional amount at the end.\n\n"
+        "Examples:\n@alice @bob\n@alice\nself\nself 100000",
         reply_markup=ForceReply(selective=True),
     )
     return BLESS_INPUT
@@ -193,12 +193,25 @@ async def bless_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return ConversationHandler.END if success else BLESS_INPUT
 
 
+def resolve_bless_self_alias(raw_text: str, update: Update) -> str:
+    tokens = [token for token in raw_text.replace(",", " ").split() if token]
+    if not any(token.lower() == "self" for token in tokens):
+        return raw_text
+
+    user = update.effective_user
+    if user is None or not user.username:
+        raise ParseError("You need a Telegram username before you can use /bless self.")
+
+    resolved_tokens = [f"@{user.username}" if token.lower() == "self" else token for token in tokens]
+    return " ".join(resolved_tokens)
+
+
 async def process_bless(update: Update, context: ContextTypes.DEFAULT_TYPE, raw_text: str) -> bool:
     storage = get_storage(context)
     chat_id = update.effective_chat.id
 
     try:
-        parsed = parse_bless_text(raw_text)
+        parsed = parse_bless_text(resolve_bless_self_alias(raw_text, update))
     except ParseError as exc:
         await update.effective_message.reply_text(str(exc))
         return False
