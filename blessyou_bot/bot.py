@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 import signal
 from contextlib import suppress
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from telegram import BotCommand, ForceReply, InputFile, Update
+from telegram import BotCommand, ForceReply, InputFile, Message, Update
 from telegram.constants import ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import (
@@ -33,6 +34,7 @@ LOGGER = logging.getLogger(__name__)
 BLESS_INPUT = 1
 UNBLESS_INPUT = 2
 AUDIO_FILE_PATH = Path(__file__).resolve().parent.parent / "data" / "Faaah.m4a"
+SURPRISE_AUDIO_FILE_PATH = Path(__file__).resolve().parent.parent / "data" / "surprise.mp3"
 
 
 class UpdateDispatcher:
@@ -111,6 +113,7 @@ def create_application(settings: Settings, storage: MongoStorage) -> Application
     application.add_handler(CommandHandler("hardreset", hard_reset))
     application.add_handler(CommandHandler("blessme", bless_me))
     application.add_handler(CommandHandler("faaaah", faaaah))
+    application.add_handler(CommandHandler("surprise", surprise))
     application.add_handler(bless_flow)
     application.add_handler(unbless_flow)
     application.add_handler(CommandHandler("scoreboard", scoreboard))
@@ -134,15 +137,57 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def faaaah(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not AUDIO_FILE_PATH.exists():
-        LOGGER.error("Faaah audio file is missing at %s", AUDIO_FILE_PATH)
-        await update.effective_message.reply_text("The faaah is temporarily unavailable.")
-        return
+    await send_audio_file(
+        update,
+        AUDIO_FILE_PATH,
+        missing_message="The faaah is temporarily unavailable.",
+        title="Faaah",
+    )
 
-    with AUDIO_FILE_PATH.open("rb") as audio_file:
-        await update.effective_message.reply_audio(
-            audio=InputFile(audio_file, filename=AUDIO_FILE_PATH.name),
-            title="Faaah",
+
+async def surprise(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    random_stem = f"voice_note_{secrets.token_hex(6)}"
+    sent_message = await send_audio_file(
+        update,
+        SURPRISE_AUDIO_FILE_PATH,
+        missing_message="The surprise clip is temporarily unavailable.",
+        filename=f"{random_stem}{SURPRISE_AUDIO_FILE_PATH.suffix}",
+        title=random_stem,
+    )
+    if sent_message is not None:
+        context.application.create_task(delete_message_later(sent_message, delay_seconds=60))
+
+
+async def send_audio_file(
+    update: Update,
+    file_path: Path,
+    *,
+    missing_message: str,
+    filename: str | None = None,
+    title: str | None = None,
+) -> Message | None:
+    if not file_path.exists():
+        LOGGER.error("Audio file is missing at %s", file_path)
+        await update.effective_message.reply_text(missing_message)
+        return None
+
+    with file_path.open("rb") as audio_file:
+        return await update.effective_message.reply_audio(
+            audio=InputFile(audio_file, filename=filename or file_path.name),
+            title=title,
+        )
+
+
+async def delete_message_later(message: Message, *, delay_seconds: int) -> None:
+    await asyncio.sleep(delay_seconds)
+    try:
+        await message.delete()
+    except TelegramError:
+        LOGGER.warning(
+            "Failed to delete delayed message %s in chat %s",
+            message.message_id,
+            message.chat_id,
+            exc_info=True,
         )
 
 
@@ -513,6 +558,7 @@ async def configure_application(application: Application, settings: Settings) ->
             BotCommand("bless", "Award points to blessers"),
             BotCommand("blessme", "Bless yourself for +2 points"),
             BotCommand("faaaah", "Play the faaah audio"),
+            BotCommand("surprise", "Send the mystery audio"),
             BotCommand("unbless", "Deduct points for a rule break"),
             BotCommand("scoreboard", "Show the current rankings"),
             BotCommand("rules", "Show the chat rules"),

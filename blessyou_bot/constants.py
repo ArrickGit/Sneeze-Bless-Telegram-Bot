@@ -10,6 +10,7 @@ HELP_TEXT = """Bless You Sneeze Bot commands:
 /bless self [points] - Bless yourself using your own Telegram username
 /blessme - Bless yourself for +2 points
 /faaaah - Send the sacred faaah audio
+/surprise - Send the mystery audio clip
 /bless - Start a guided bless entry
 /unbless @user [points] [reason] - Deduct points for breaking the rules
 /scoreboard - Show the current rankings
@@ -27,6 +28,7 @@ Examples:
 /bless self 100000
 /blessme
 /faaaah
+/surprise
 /unbless @user1 -2 early blessing during a sneeze streak
 /unbless @user1 2 early blessing during a sneeze streak
 """
