@@ -209,11 +209,11 @@ async def bless_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     storage = get_storage(context)
     actor = build_actor(update)
     participant = Participant(key=user.username.lower(), handle=f"@{user.username.lower()}")
-    results = await storage.bless(update.effective_chat.id, [participant], 2, actor)
+    results = await storage.bless(update.effective_chat.id, [participant], 5, actor)
     result = results[0]
 
     await update.effective_message.reply_text(
-        f"Self bless recorded: {result['handle']} +2 (now {result['points']})"
+        f"Self bless recorded: {result['handle']} +5 (now {result['points']})"
     )
 
 
@@ -556,7 +556,7 @@ async def configure_application(application: Application, settings: Settings) ->
     await application.bot.set_my_commands(
         [
             BotCommand("bless", "Award points to blessers"),
-            BotCommand("blessme", "Bless yourself for +2 points"),
+            BotCommand("blessme", "Bless yourself for +5 points"),
             BotCommand("faaaah", "Play the faaah audio"),
             BotCommand("surprise", "Send the mystery audio"),
             BotCommand("unbless", "Deduct points for a rule break"),

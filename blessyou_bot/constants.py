@@ -8,7 +8,7 @@ HELP_TEXT = """Bless You Sneeze Bot commands:
 /bless @first @second [points] - Award points to the first two blessers
 /bless @first [points] - Award points to a single blesser
 /bless self [points] - Bless yourself using your own Telegram username
-/blessme - Bless yourself for +2 points
+/blessme - Bless yourself for +5 points
 /faaaah - Send the sacred faaah audio
 /surprise - Send the mystery audio clip
 /bless - Start a guided bless entry
