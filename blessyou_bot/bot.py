@@ -227,7 +227,7 @@ async def bless_entry(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     await update.effective_message.reply_text(
         "Reply with 1 or 2 Telegram handles, or use self for yourself, with an optional amount at the end.\n\n"
-        "Examples:\n@alice @bob\n@alice\nself\nself 100000",
+        "Examples:\n@alice @bob\n@alice\nself\nself @alice 5\nself 100000",
         reply_markup=ForceReply(selective=True),
     )
     return BLESS_INPUT

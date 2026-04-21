@@ -6,6 +6,7 @@ A fun Telegram bot for group chats that tracks who said "bless you" first.
 
 - `/bless @first @second [points]` awards points to the first two valid blessers.
 - `/bless self [points]` resolves `self` to your own Telegram username.
+- `/bless self @someone [points]` gives the same amount to you and one other person.
 - `/blessme` gives you 5 points for blessing yourself after sneezing.
 - `/faaaah` sends the bundled `Faaah.m4a` audio clip.
 - `/surprise` sends the bundled surprise audio clip with a random filename.
@@ -59,6 +60,8 @@ By default, polling mode drops old queued updates on startup so a local debug se
 - `/bless @alice 100000`
 - `/bless @alice @bob 100000`
 - `/bless self`
+- `/bless self @alice`
+- `/bless self @alice 5`
 - `/bless self 100000`
 - `/blessme`
 - `/faaaah`
@@ -82,7 +85,7 @@ There is also a hidden owner-only reset command for emergencies:
 
 The bot tracks blessers by Telegram handle because `/bless` is based on `@handles`. If someone changes their Telegram username later, they may look like a new person in the scoreboard. That is a good enough tradeoff for a first version and keeps the bot simple.
 
-`/bless self` is just a shortcut that resolves to your current Telegram username, so it still requires you to have a username set.
+`/bless self` is just a shortcut that resolves to your current Telegram username, so it still requires you to have a username set. That also means `/bless self @alice 5` already works and gives `+5` to both you and `@alice`.
 
 The bot now also validates bless and unbless handles against Telegram users it has seen before. If it cannot verify a handle, it will reject the command instead of creating a fake scoreboard entry. In practice, that means someone may need to message the bot once before they can be scored by handle.
 
